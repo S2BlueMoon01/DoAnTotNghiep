@@ -2,14 +2,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# Tính khoảng cách Euclidean giữa hai điểm
 def euclidean_distance(point1, point2):
+    """
+    Tính khoảng cách Euclidean giữa hai điểm.
+
+    Parameters:
+    point1 (list): Tọa độ của điểm thứ nhất.
+    point2 (list): Tọa độ của điểm thứ hai.
+
+    Returns:
+    float: Khoảng cách Euclidean giữa hai điểm.
+    """
     return np.linalg.norm(np.array(point1) - np.array(point2))
 
 
 # Định nghĩa bài toán TSP
 class TSPProblem:
     def __init__(self, cities):
+        """
+        Khởi tạo bài toán TSP với danh sách các thành phố.
+
+        Parameters:
+        cities (list): Danh sách các thành phố.
+
+        Returns:
+        None
+        """
         self.num_cities = len(cities)
         self.cities = np.array(cities)
         self.distance_matrix = np.zeros((self.num_cities, self.num_cities))
@@ -23,6 +41,15 @@ class TSPProblem:
                 self.distance_matrix[j, i] = distance
 
     def calculate_distance(self, tour):
+        """
+        Tính khoảng cách của một chuỗi thành phố.
+
+        Parameters:
+        tour (list): Chuỗi các thành phố.
+
+        Returns:
+        float: Khoảng cách của chuỗi thành phố.
+        """
         total_distance = 0
         for i in range(len(tour) - 1):
             total_distance += self.distance_matrix[tour[i], tour[i + 1]]
@@ -34,6 +61,15 @@ class TSPProblem:
 # Định nghĩa lớp Particle cho PSO
 class Particle:
     def __init__(self, num_cities):
+        """
+        Khởi tạo một particle với vị trí và vận tốc ngẫu nhiên.
+
+        Parameters:
+        num_cities (int): Số lượng thành phố trong bài toán TSP.
+
+        Returns:
+        None
+        """
         self.position = np.random.permutation(num_cities)
         self.velocity = np.random.permutation(num_cities)
         self.best_position = self.position
@@ -42,6 +78,20 @@ class Particle:
 
 # PSO cho bài toán TSP
 def pso_tsp(num_particles, num_iterations, tsp_problem, w, c1, c2):
+    """
+    Áp dụng thuật toán PSO để giải quyết bài toán TSP.
+
+    Parameters:
+    num_particles (int): Số lượng particle trong thuật toán PSO.
+    num_iterations (int): Số lần lặp của thuật toán PSO.
+    tsp_problem (TSPProblem): Đối tượng bài toán TSP.
+    w (float): Hệ số trọng số của vận tốc hiện tại.
+    c1 (float): Hệ số trọng số của vận tốc cá nhân.
+    c2 (float): Hệ số trọng số của vận tốc toàn cục.
+
+    Returns:
+    tuple: Một tuple gồm hai phần tử: chuỗi thành phố tốt nhất và độ dài quãng đường tương ứng.
+    """
     num_cities = tsp_problem.num_cities
     particles = [Particle(num_cities) for _ in range(num_particles)]
     global_best_tour = None
@@ -80,8 +130,9 @@ def pso_tsp(num_particles, num_iterations, tsp_problem, w, c1, c2):
 
 
 # Sử dụng bài toán TSP đã định nghĩa
-custom_cities = [(0, 0), (1, 2), (3, 5), (7, 1), (8, 3)]  # Tọa độ các thành phố
+custom_cities = [(0, 0), (3, 0), (3, 4), (6, 4), (6, 0)]  # Tọa độ các thành phố
 num_cities = 5
+
 # Tạo ngẫu nhiên các tọa độ của các thành phố
 # custom_cities = np.random.rand(num_cities, 2)
 tsp_problem = TSPProblem(custom_cities)
