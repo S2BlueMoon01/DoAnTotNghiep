@@ -321,7 +321,7 @@ class Robot:
                 if path == []:
                     # Kết thúc việc duyệt
                     # return
-                    pg.image.save(ui.WIN, "C:/Users/BlueMoon/Desktop/DATN/Code/ThanTrongNghia_20184298_Code/out/test2_5.png")
+                    pg.image.save(ui.WIN, "C:/Users/BlueMoon/Desktop/DATN/MyCode/Robot/out/test2_5.png")
                     continue
                 else:
                     if flag == False:
