@@ -120,9 +120,9 @@ def pso_tsp(num_particles, num_iterations, tsp_problem, w, c1, c2):
                 + c1 * r1 * (particle.best_position - particle.position)
                 + c2 * r2 * (global_best_tour - particle.position)
             )
-            particle.position = np.roll(
-                particle.position, int(particle.velocity[0])
-            )  # Cuộn vòng lại nếu vượt quá số thành phố
+            # Cuộn vòng lại nếu vượt quá số thành phố
+            particle.position = np.roll(particle.position, int(particle.velocity[0]))
+
             # print("------------------------------")
             # print(f"Độ dài quãng đường ngắn nhất: {global_best_distance}")
             # print(f"Chuỗi thành phố tốt nhất: {global_best_tour}")
@@ -130,7 +130,7 @@ def pso_tsp(num_particles, num_iterations, tsp_problem, w, c1, c2):
 
 
 # Sử dụng bài toán TSP đã định nghĩa
-custom_cities = [(0, 0), (3, 0), (3, 4), (6, 4), (6, 0)]  # Tọa độ các thành phố
+custom_cities = [(0, 0), (3, 1), (3, 6), (6, 0), (0, 4)]  # Tọa độ các thành phố
 num_cities = 5
 
 # Tạo ngẫu nhiên các tọa độ của các thành phố
@@ -138,8 +138,8 @@ num_cities = 5
 tsp_problem = TSPProblem(custom_cities)
 
 # Thiết lập các tham số cho PSO
-num_particles = 30  # Số lượng hạt trong PSO
-num_iterations = 100  # Số lượng vòng lặp PSO
+num_particles = 200  # Số lượng hạt trong PSO
+num_iterations = 1000  # Số lượng vòng lặp PSO
 w = 0.5  # Trọng số vận tốc
 c1 = 1.5  # Hệ số học tập cho best_position của particle
 c2 = 1.5  # Hệ số học tập cho global_best_tour
