@@ -20,8 +20,10 @@ ORANGE = (255, 165, 0)
 EPSILON = 15
 
 BORDER = 1
-INFO_BAR_HEIGHT = 30
 
+# INFO_BAR_HEIGHT = 30
+
+# Pham vi cảm biến của robot
 VISION_SENSOR_RANGE = 5
 
 # Khởi tạo pygame
@@ -58,19 +60,30 @@ def getDistinctColors(n):
 
 class Grid_Map:
     def __init__(self):
+        # đặt tiêu đề
         pg.display.set_caption("Coverage")
+        
+        #lưu trữ cửa sổ hiển thị của ứng dụng
         self.WIN = None
 
+        # Lưu trữ thông tin về môi trường
         self.map = None
+        
+        # Số hàng trong map
         self.row_count = 0
+
+        # Số cột trong map
         self.col_count = 0
 
+        # Vị trí của pin và robot
         self.battery_pos = (0, 0)
         self.vehicle_pos = (0, 0)
 
+        # Hình dạng của pin và robot
         self.battery_img = pg.Rect(BORDER, BORDER, EPSILON - BORDER, EPSILON - BORDER)
         self.vehicle_img = pg.Rect(BORDER, BORDER, EPSILON - BORDER, EPSILON - BORDER)
 
+        
         self.trajectories = [[(0, 0)]] # Danh sách các đường đi (đang hiển thị đường đi của việc phủ sóng)
 
         self.move_status = 0 # 0: di chuyển bình thường, 1: rút lui, 2: sạc, 3: tiến lên
@@ -154,7 +167,7 @@ class Grid_Map:
             pg.draw.rect(self.WIN, GREEN, self.battery_img)
             pg.display.flip()
 
-        pg.image.save(self.WIN, "C:/Users/BlueMoon/Desktop/DATN/MyCode/Robot/out/map/map1.png")
+        pg.image.save(self.WIN, "./out/map/map1.png")
         return copy.deepcopy(self.map), self.battery_pos
 
     def save_map(self, output_file):
@@ -222,12 +235,15 @@ class Grid_Map:
                 if self.map[row][col] in (1, 'o'):
                     color = BLACK
 
+                # Màu đường đã đi
                 elif self.map[row][col] in (2, 'e'):
                     color = DARK_YELLOW
-                
+ 
+                # Màu chướng ngại vật
                 elif self.map[row][col] == 3:
                     color = DARKGREY
 
+                # Màu những ô mà chướng ngại vật có thể xuất hiện
                 elif self.map[row][col] == 4:
                     color = ORANGE
                 
@@ -238,36 +254,36 @@ class Grid_Map:
                             EPSILON - BORDER,
                             EPSILON - BORDER])
 
-    def illustrate_regions(self, decomposed, region_count):
-        """
-        Hiển thị các khu vực được phân chia trên bản đồ.
+    # def illustrate_regions(self, decomposed, region_count):
+    #     """
+    #     Hiển thị các khu vực được phân chia trên bản đồ.
 
-        Parameters:
-            - decomposed (list): Ma trận chứa thông tin về việc phân chia khu vực.
-            - region_count (int): Số lượng khu vực.
+    #     Parameters:
+    #         - decomposed (list): Ma trận chứa thông tin về việc phân chia khu vực.
+    #         - region_count (int): Số lượng khu vực.
 
-        Returns:
-            None
-        """
-        self.WIN.fill(BLACK)
-        region_colors = getDistinctColors(region_count)
-        random.shuffle(region_colors)
+    #     Returns:
+    #         None
+    #     """
+    #     self.WIN.fill(BLACK)
+    #     region_colors = getDistinctColors(region_count)
+    #     random.shuffle(region_colors)
 
-        for row in range(len(decomposed)):
-            for col in range(len(decomposed[0])):
-                color = BLACK
-                region = decomposed[row][col]
-                if region != 0:
-                    color = region_colors[region - 1]
+    #     for row in range(len(decomposed)):
+    #         for col in range(len(decomposed[0])):
+    #             color = BLACK
+    #             #region = decomposed[row][col]
+    #             if region != 0:
+    #                 color = region_colors[region - 1]
 
-                pg.draw.rect(self.WIN,
-                            color,
-                            [EPSILON * col + BORDER,
-                            EPSILON * row + BORDER,
-                            EPSILON - BORDER,
-                            EPSILON - BORDER])
+    #             pg.draw.rect(self.WIN,
+    #                         color,
+    #                         [EPSILON * col + BORDER,
+    #                         EPSILON * row + BORDER,
+    #                         EPSILON - BORDER,
+    #                         EPSILON - BORDER])
 
-        pg.display.flip()
+    #     pg.display.flip()
 
     def draw_path(self, path, color=RED, width=2):
         """
@@ -406,9 +422,7 @@ class Grid_Map:
             - bool: True nếu vị trí hợp lệ, False nếu không hợp lệ.
         """
         row, col = pos
-        if row < 0 or row >= self.row_count: return False
-        if col < 0 or col >= self.col_count: return False
-        return True
+        return 0 <= row < self.row_count and 0 <= col < self.col_count
 
 def main():
     ui = Grid_Map()

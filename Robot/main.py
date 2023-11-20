@@ -23,7 +23,7 @@ ENERGY_CAPACITY = math.inf
 ui = Grid_Map()  # Tạo một đối tượng lưới bản đồ
 
 # Đọc và chỉnh sửa bản đồ từ file 'test_4.txt' và lấy vị trí ban đầu của pin
-ui.read_map('map/scenario_2/test_4.txt')
+ui.read_map('map/scenario_2/test_1.txt')
 ENVIRONMENT, battery_pos = ui.edit_map()
 
 # Số hàng và số cột trong môi trường
@@ -47,6 +47,9 @@ nums_cell_repetition = 0
 repetition_rate = 0
 return_charge_count = 1
 count_waiting = 0
+
+
+total_coverable_cells, nums_covered_cells = 0, 0
 
 # Danh sách đối tượng vật thể động
 dynamic_obs_list : list[DynamicObstacle] = []
@@ -321,13 +324,15 @@ class Robot:
                 if path == []:
                     # Kết thúc việc duyệt
                     # return
-                    pg.image.save(ui.WIN, "C:/Users/BlueMoon/Desktop/DATN/MyCode/Robot/out/test2_5.png")
+                    pg.image.save(ui.WIN, "./out/test2_5.png")
                     continue
                 else:
                     if flag == False:
                         self.move_to(path[0])
                     else:
                         _, deadlock_wp = self.logic.escape_deadlock_dynamic(self.current_pos, path[-1])
+                        
+                        # Quyết định đi hoặc chờ
                         if deadlock_wp != path[0] and self.prob_map[self.current_pos] < MIN_PROB_THRESHOLD:
                             if self.prob_map[path[0]] > 0:
                                 continue
@@ -700,6 +705,10 @@ class Robot:
         """
         if self.dynamic_map[pos] == 3:
             raise Exception('Va chạm với chướng ngại vật')
+        if self.dynamic_map[pos] == 2:
+            global nums_cell_repetition
+            # Đếm số lần lặp lại ô
+            nums_cell_repetition += 1   
 
         global total_travel_length, coverage_length, retreat_length, advance_length
         dist = energy = math.dist(self.current_pos, pos)
@@ -810,11 +819,16 @@ class Robot:
     def calculate_coverage_rataio(self):
         """
         Tính toán tỷ lệ phủ sóng của môi trường đã được khám phá.
-
+        total_coverable_cells: Tổng số ô có thể khám phá.
+        nums_covered_cells: Số ô đã được khám phá.
+        nums_cell_repetition: Số ô lặp lại.
+        coverage_ratio: Tỉ lệ bao phủ.
+        repetition_rate: Tỉ lệ lặp lại.
         Returns:
             - None
         """
-        total_coverable_cells, nums_covered_cells = 0, 0
+        
+        global total_coverable_cells, nums_covered_cells
         global coverage_ratio, repetition_rate
         for rows in self.static_map:
             for i in rows:
@@ -825,6 +839,7 @@ class Robot:
                     nums_covered_cells += 1
         coverage_ratio = round(nums_covered_cells/total_coverable_cells*100, 2)
         repetition_rate = round(nums_cell_repetition/nums_covered_cells*100, 2)
+        print (nums_cell_repetition)
 
 def main():
     """
@@ -838,11 +853,13 @@ def main():
     robot.run()
     robot.calculate_coverage_rataio()
     
-    print('\nCoverage:\t', coverage_length)
-    print('Retreat:\t', retreat_length)
-    print('Advance:\t', advance_length)
-    print('Coverage Ratio:\t', coverage_ratio)
-    print('Repetition Rate:\t', repetition_rate)
+    print('\nTổng số ô trống trên bản đồ:\t', total_coverable_cells)
+    print('Retreat:\t\t', retreat_length)
+    print('Advance:\t\t', advance_length)
+    print('Số ô đã khám phá:\t', nums_covered_cells)
+    print('Tỷ lệ phủ sóng:\t\t', coverage_ratio,'%')
+    print('Số ô lặp lại:\t\t', nums_cell_repetition)
+    print('Tỷ lệ lặp lại:\t\t', repetition_rate,'%')
     print('-' * 8)
     print('Total:', total_travel_length)
 
