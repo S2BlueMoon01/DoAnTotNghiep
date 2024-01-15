@@ -13,10 +13,10 @@ neighbors = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1
 
 class LogicAlgorithm:
     def __init__(self, row_count, col_count):
-        self.state = Q.START
-        self.weight_map = np.zeros((row_count, col_count))
-        self.prob_map = np.zeros((row_count, col_count))
-        self.direction = 4
+        self.state = Q.START    # trạng thái của thuật toán có các giá trị Q.START, Q.NORMAL, Q.DEADLOCK, Q.FINISH
+        self.weight_map = np.zeros((row_count, col_count))      # bản đồ trọng số 
+        self.prob_map = np.zeros((row_count, col_count))    # bản đồ xác suất
+        self.direction = 4  # hướng di chuyển của robot (1: lên, 2: trái, 3: phải, 4: xuống)
 
     def init_weight_map(self, environment):
         """
@@ -26,9 +26,9 @@ class LogicAlgorithm:
             - environment (numpy.ndarray): Môi trường với các ô 0 (ô trống) hoặc 1 (ô chướng ngại vật).
         """
         row_count, col_count = len(environment), len(environment[0])
-        for x, row in enumerate(environment):
-            for y, val in enumerate(row):
-                self.weight_map[x, y] = environment[x, y]
+        for x, row in enumerate(environment):   # Duyệt qua mỗi hàng trong môi trường. x là chỉ số của hàng và row là hàng đó.
+            for y, val in enumerate(row):   # Duyệt qua mỗi ô trong hàng. y là chỉ số của ô và val là giá trị của ô đó.
+                self.weight_map[x, y] = environment[x, y]   # Gán giá trị của ô trong môi trường cho ô trong bản đồ trọng số.
     
     def set_map(self, map):
         """
@@ -88,35 +88,35 @@ class LogicAlgorithm:
         W1 = 0.5
         return self.prob_map[cur_pos] * W1 + self.prob_map[nb_pos] * W2
 
-    def two_step_aution(self, cur_pos):
-        """
-        Thực hiện đánh giá và đấu giá bước hai trong thuật toán.
+    # def two_step_aution(self, cur_pos):
+    #     """
+    #     Thực hiện đánh giá và đấu giá bước hai trong thuật toán.
 
-        Parameters:
-            - cur_pos (tuple): Vị trí hiện tại (x, y).
+    #     Parameters:
+    #         - cur_pos (tuple): Vị trí hiện tại (x, y).
 
-        Returns:
-            - list: Danh sách các giá trị đấu giá và vị trí hàng xóm tương ứng.
-        """
-        self.state = Q.NORMAL
-        cur_neighbours = self.four_neighbours(cur_pos)
-        bid_value = []
-        for cur_nb, direction_priority in cur_neighbours:
-            zeta_nb = self.calculate_zeta(cur_pos, cur_nb)
-            nb_neighbours = self.four_neighbours(cur_nb)
-            max_zeta = -1000
-            for nb, dp in nb_neighbours:
-                if nb == cur_pos:
-                    continue
-                if self.calculate_zeta(cur_nb, nb) > max_zeta:
-                    max_zeta = self.calculate_zeta(cur_nb, nb)
-            if zeta_nb == 0 and max_zeta == 0:
-                c = math.inf
-            else:
-                c = 1 / (zeta_nb + max_zeta)
-            bid_value.append((c, direction_priority, cur_nb))
+    #     Returns:
+    #         - list: Danh sách các giá trị đấu giá và vị trí hàng xóm tương ứng.
+    #     """
+    #     self.state = Q.NORMAL
+    #     cur_neighbours = self.four_neighbours(cur_pos)
+    #     bid_value = []
+    #     for cur_nb, direction_priority in cur_neighbours:
+    #         zeta_nb = self.calculate_zeta(cur_pos, cur_nb)
+    #         nb_neighbours = self.four_neighbours(cur_nb)    # Lấy danh sách các ô lân cận của các ô lân cận
+    #         max_zeta = -1000
+    #         for nb, dp in nb_neighbours:
+    #             if nb == cur_pos:
+    #                 continue
+    #             if self.calculate_zeta(cur_nb, nb) > max_zeta:
+    #                 max_zeta = self.calculate_zeta(cur_nb, nb)
+    #         if zeta_nb == 0 and max_zeta == 0:
+    #             c = math.inf
+    #         else:
+    #             c = 1 / (zeta_nb + max_zeta)
+    #         bid_value.append((c, direction_priority, cur_nb))
 
-        return bid_value
+    #     return bid_value
 
     def get_replan_wp(self, cur_pos):
         """
@@ -133,7 +133,7 @@ class LogicAlgorithm:
 
     def two_step_evaluation(self, cur_pos):  
         """
-        Thực hiện đánh giá bước hai trong thuật toán.
+        Thực hiện đánh giá hai bước trong thuật toán.
 
         Parameters:
             - cur_pos (tuple): Vị trí hiện tại (x, y).
@@ -213,7 +213,7 @@ class LogicAlgorithm:
 
         # deadlock
         self.state = Q.DEADLOCK
-        return wp
+        # return wp
     
         wp = self.get_deadlock_wp(current_pos)
 
@@ -239,7 +239,8 @@ class LogicAlgorithm:
     def boustrophedon_moving(self, current_pos):
         """
         Thực hiện di chuyển theo kiểu boustrophedon (zigzag) từ vị trí hiện tại.
-
+        Ưu tiên di chuyển theo hướng xuống, lên, trái, phải
+        
         Parameters:
             - current_pos (tuple): Vị trí hiện tại (x, y).
 
@@ -249,18 +250,18 @@ class LogicAlgorithm:
         row_count, col_count = len(self.weight_map), len(self.weight_map[0])
         (x, y) = current_pos
 
-        if (x + 1) < row_count and self.weight_map[x + 1][y] == 0:
+        if (x + 1) < row_count and self.weight_map[x + 1][y] == 0:  # di chuyển xuống dưới
             return [(x + 1, y)]
-        if (x - 1) >= 0 and self.weight_map[x - 1][y] == 0:
+        if (x - 1) >= 0 and self.weight_map[x - 1][y] == 0: # di chuyển lên trên
             return [(x - 1, y)]
-        if y + 1 < col_count and self.weight_map[x][y+1] == 0:
+        if y + 1 < col_count and self.weight_map[x][y+1] == 0:  # di chuyển sang phải
             if self.direction == 3:
                 return [(x, y + 1)]
         self.direction = 4
-        if y - 1 > 0 and self.weight_map[x][y-1] == 0:
+        if y - 1 > 0 and self.weight_map[x][y-1] == 0:  # di chuyển sang trái
             return [(x, y - 1)]
         self.direction = 3
-        if y + 1 < col_count and self.weight_map[x][y+1] == 0:
+        if y + 1 < col_count and self.weight_map[x][y+1] == 0:  # di chuyển sang phải
             return [(x, y + 1)]
         return []
 
@@ -293,7 +294,7 @@ class LogicAlgorithm:
             if flag == False:
                 break
             cur_node = queue.popleft()
-            # traverse neighbors
+            # duyệt neighbors
             for dx, dy in neighbors:
                 x, y = cur_node[0] + dx, cur_node[1] + dy
                 
@@ -307,7 +308,7 @@ class LogicAlgorithm:
                         queue.append((x, y))
                         parent[x, y] = cur_node
                     continue 
-                else: 
+                else: # chưa thăm
                     deadlock_wp = (x, y)  # unvisited
                     parent[deadlock_wp] = cur_node
                     flag = False
@@ -381,41 +382,41 @@ class LogicAlgorithm:
         
         return []
 
-    def predict(self, current_pos, step_count):
-        """
-        Dự đoán các vị trí tiếp theo dựa trên thuật toán và số bước.
+    # def predict(self, current_pos, step_count):
+    #     """
+    #     Dự đoán các vị trí tiếp theo dựa trên thuật toán và số bước.
 
-        Parameters:
-            - current_pos (tuple): Vị trí hiện tại (x, y).
-            - step_count (int): Số bước dự đoán.
+    #     Parameters:
+    #         - current_pos (tuple): Vị trí hiện tại (x, y).
+    #         - step_count (int): Số bước dự đoán.
 
-        Returns:
-            - list: Danh sách các vị trí dự đoán.
-        """
-        waypoint_list = [current_pos]
+    #     Returns:
+    #         - list: Danh sách các vị trí dự đoán.
+    #     """
+    #     waypoint_list = [current_pos]
 
-        temporary_visited_list = []
-        for _ in range(step_count):
-            wp = self.get_wp(current_pos)
-            if self.state == Q.FINISH:
-                break
-            elif self.state == Q.NORMAL:
-                current_pos = wp[0]
-                if self.weight_map[current_pos] == 2:
-                    pass
-                temporary_visited_list.append(current_pos)
-                self.weight_map[current_pos] = 2
-                waypoint_list.append(current_pos)
-            elif self.state == Q.DEADLOCK:
-                graph = GridMapGraph(self.weight_map)
-                path, dist = a_star_search(graph, current_pos, wp[0])
-                current_pos = path[0]
-                waypoint_list.append(current_pos)
+    #     temporary_visited_list = []
+    #     for _ in range(step_count):
+    #         wp = self.get_wp(current_pos)
+    #         if self.state == Q.FINISH:
+    #             break
+    #         elif self.state == Q.NORMAL:
+    #             current_pos = wp[0]
+    #             if self.weight_map[current_pos] == 2:
+    #                 pass
+    #             temporary_visited_list.append(current_pos)
+    #             self.weight_map[current_pos] = 2
+    #             waypoint_list.append(current_pos)
+    #         elif self.state == Q.DEADLOCK:
+    #             graph = GridMapGraph(self.weight_map)
+    #             path, dist = a_star_search(graph, current_pos, wp[0])
+    #             current_pos = path[0]
+    #             waypoint_list.append(current_pos)
 
-        for pos in temporary_visited_list:
-            self.weight_map[pos] = 0
+    #     for pos in temporary_visited_list:
+    #         self.weight_map[pos] = 0
 
-        return waypoint_list
+    #     return waypoint_list
 
     def update_explored(self, pos):
         """

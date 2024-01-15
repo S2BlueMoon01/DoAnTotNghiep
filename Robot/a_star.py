@@ -36,8 +36,8 @@ def heuristic(pos_from, pos_to):
 def a_star_search(graph: GridMapGraph, start, goal):
     open = PriorityQueue() # tuple: (priority f, item)
     open.put((heuristic(start, goal), start))
-    came_from = {}
-    g = {}
+    came_from = {}  # key: node, value: parent node
+    g = {}  # key: node, value: g cost
     g[start] = 0
 
     while not open.empty():

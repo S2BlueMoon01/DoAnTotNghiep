@@ -59,7 +59,7 @@ def getDistinctColors(n):
     return [hsv2rgb(huePartition * value, 1.0, 1.0) for value in range(0, n)]
 
 class Grid_Map:
-    def __init__(self):
+    def __init__(self, vision_range = VISION_SENSOR_RANGE):
         # đặt tiêu đề
         pg.display.set_caption("Coverage")
         
@@ -90,6 +90,8 @@ class Grid_Map:
         self.charge_path_plan = [] # dùng cho rút lui và tiến lên
 
         self.energy_display = None
+        
+        self.vision_range = vision_range # phạm vi cảm biến của robot
 
     def read_map(self, filepath):
         """
@@ -215,7 +217,8 @@ class Grid_Map:
         pg.draw.rect(self.WIN, RED, self.vehicle_img)
         
         sensor_centor = ((self.vehicle_pos[1] + 1/2) * EPSILON + BORDER, (self.vehicle_pos[0] + 1/2) * EPSILON + BORDER)
-        sensor_radius = (VISION_SENSOR_RANGE + 1/2) * EPSILON
+        # sensor_radius = (VISION_SENSOR_RANGE + 1/2) * EPSILON
+        sensor_radius = (self.vision_range + 1/2) * EPSILON
         pg.draw.circle(self.WIN, (204, 255, 255), sensor_centor, sensor_radius, width = 4)
 
         energy_display_img = font.render('Energy: ' + str(self.energy_display), True, RED)

@@ -7,10 +7,11 @@ from copy import deepcopy
 
 # from a_star import GridMapGraph, a_star_search
 from dynamic_obstacle import DynamicObstacle
-# from dynamic_obstacle_random import DynamicObstacleRandom
+from dynamic_obstacle_random import DynamicObstacleRandom
 from logic import LogicAlgorithm, Q
 from grid_map import Grid_Map
 
+# Phạm vi cảm biến của robot
 VISION_SENSOR_RANGE = 5
 
 # coverage:             1 unit of energy / cell width
@@ -18,9 +19,9 @@ VISION_SENSOR_RANGE = 5
 
 # Năng lương của robot
 ENERGY_CAPACITY = math.inf
-
 # ENERGY_CAPACITY = 100
-ui = Grid_Map()  # Tạo một đối tượng lưới bản đồ
+
+ui = Grid_Map(VISION_SENSOR_RANGE)  # Tạo một đối tượng lưới bản đồ
 
 # Đọc và chỉnh sửa bản đồ từ file 'test_4.txt' và lấy vị trí ban đầu của pin
 ui.read_map('map/scenario_2/test_1.txt')
@@ -31,7 +32,7 @@ ROW_COUNT = len(ENVIRONMENT)
 COL_COUNT = len(ENVIRONMENT[0])
 
 # Tốc độ khung hình
-FPS = 60
+FPS = 40
 
 # Số lần lấy mẫu cho tính toán xác suất
 NUMS_SAMPLE = 5000
@@ -40,22 +41,39 @@ NUMS_SAMPLE = 5000
 MIN_PROB_THRESHOLD = 3
 
 # Các biến để theo dõi chi tiết hành trình của robot
-total_travel_length = 0
-coverage_length, retreat_length, advance_length = 0, 0, 0
-coverage_ratio = 0
-nums_cell_repetition = 0
-repetition_rate = 0
-return_charge_count = 1
-count_waiting = 0
+total_travel_length = 0 # Tổng chiều dài hành trình
+coverage_length, retreat_length, advance_length = 0, 0, 0   # Chiều dài hành trình duyệt, rút lui, tiến lên
+coverage_ratio = 0  # Tỷ lệ phủ sóng
+nums_cell_repetition = 0   # Số lần lặp lại ô
+repetition_rate = 0 # Tỷ lệ lặp lại
+return_charge_count = 1 # Số lần trở về sạc pin
+count_waiting = 0  # Số lần chờ
 
 
-total_coverable_cells, nums_covered_cells = 0, 0
+total_coverable_cells, nums_covered_cells = 0, 0    # Tổng số ô có thể duyệt, số ô đã duyệt
 
 # Danh sách đối tượng vật thể động
 dynamic_obs_list : list[DynamicObstacle] = []
 
 # Thêm một đối tượng vật thể động vào danh sách, với các thông số cụ thể
-dynamic_obs_list.append(DynamicObstacle((3, 6), (2, 1), 4, 10))
+# dynamic_obs_list.append(DynamicObstacle((3, 6), (2, 1), 4, 10))
+dynamic_obs_list.append(DynamicObstacle((23, 12), (1, 3), 3, 10))    # Chướng ngại vật động 1 1.25v
+# dynamic_obs_list.append(DynamicObstacle((23, 12), (1, 3), 3, 8))    # Chướng ngại vật động 1 1.25v
+# dynamic_obs_list.append(DynamicObstacle((23, 12), (1, 3), 3, 12))    # Chướng ngại vật động 1 5/6v
+# dynamic_obs_list.append(DynamicObstacle((12, 15), (2, 2), 3, 8))    # Chướng ngại vật động 2 1.25v
+# dynamic_obs_list.append(DynamicObstacle((12, 15), (2, 2), 1, 12))    # Chướng ngại vật động 2 5/6v
+# dynamic_obs_list.append(DynamicObstacle((25, 10), (1, 2), 1, 8))    # Chướng ngại vật động 3 1.25v
+# dynamic_obs_list.append(DynamicObstacle((25, 10), (1, 3), 3, 12))    # Chướng ngại vật động 3 5/6v
+# dynamic_obs_list.append(DynamicObstacle((3, 8), (1, 2), 1, 8))    # Chướng ngại vật động 4 1.25v
+# dynamic_obs_list.append(DynamicObstacle((3, 8), (21, 2), 4, 12))    # Chướng ngại vật động 4 5/6v
+# dynamic_obs_list.append(DynamicObstacle((26, 13), (1, 3), 3, 8))    # Chướng ngại vật động 5 1.25v
+# dynamic_obs_list.append(DynamicObstacle((26, 13), (1, 3), 4, 12))    # Chướng ngại vật động 5 5/6v
+
+
+dynamic_obs_list.append(DynamicObstacleRandom((26, 13), (1, 2), 4, 10))    # Chướng ngại vật động 5 5/6v
+
+
+
 
 # Danh sách để theo dõi thời gian chờ liên tiếp của các vật thể động
 consecutive_wait_obs_list = [0] * len(dynamic_obs_list)
@@ -110,30 +128,30 @@ class Robot:
                 2 : đã thăm
                 3 : chướng ngại vật động
         '''
-        self.static_map = None
-        self.dynamic_map = None
-        self.predict_map = None
-        self.prob_map = None
-        self.seen_map = None
+        self.static_map = None  # Bản đồ tĩnh
+        self.dynamic_map = None # Bản đồ động
+        self.predict_map = None # Bản đồ dự đoán
+        self.prob_map = None    # Bản đồ xác suất
+        self.seen_map = None    # Bản đồ đã thăm
 
-        self.current_pos = battery_pos
+        self.current_pos = battery_pos  # Vị trí hiện tại của robot
 
         # Góc giữa hướng của robot và trục từ trái sang phải tính bằng radian [0, 2pi)
-        # (hướng lên ban đầu)
-        self.angle = - math.pi / 2
-        self.velocity = 10
+        self.angle = - math.pi / 2  # Góc quay của robot 
+        self.velocity = 10  # Vận tốc của robot
 
-        self.battery_pos = battery_pos
-        self.energy = ENERGY_CAPACITY
+        self.battery_pos = battery_pos  # Vị trí của pin
+        self.energy = ENERGY_CAPACITY   # Năng lượng của robot
 
         self.move_status = 0 # 0: di chuyển bình thường, 1: rút lui, 2: sạc pin, 3: tiến lên
         self.cache_path = [] # lưu trữ đường dẫn tạm thời (ví dụ: rút lui, tiến lên)
-        self.repeated_cells = []
+        self.repeated_cells = []    # Danh sách các ô đã lặp lại
 
-        self.obs_prev_detected_dict = dict()
-        self.obs_detected_dict = dict()
-        self.scan_freq = 2
-        self.alpha_1 = 0.3
+        self.obs_prev_detected_dict = dict()    # Danh sách các chướng ngại vật động phát hiện được trước đó
+        self.obs_detected_dict = dict()        # Danh sách các chướng ngại vật động phát hiện được hiện tại
+        self.scan_freq = 2  # Tần số quét của robot
+        # Hệ số alpha Tạo mẫu cho vị trí tiềm năng của chướng ngại vật dựa trên phương pháp lấy mẫu.
+        self.alpha_1 = 0.3  
         self.alpha_2 = 0.7
         self.alpha_3 = 0.3
         self.alpha_4 = 0.7
@@ -148,16 +166,16 @@ class Robot:
         Returns:
             None
         """
-        row_count, col_count = len(environment), len(environment[0])
-        self.static_map = deepcopy(environment)
-        self.dynamic_map = deepcopy(environment)
-        self.predict_map = deepcopy(environment)
-        self.prob_map = deepcopy(environment)
-        self.seen_map = deepcopy(environment)
-        self.predict_map[self.battery_pos] = self.dynamic_map[self.battery_pos] = 2
-        self.seen_map[self.battery_pos] = 2
+        row_count, col_count = len(environment), len(environment[0])    # Số hàng và số cột của bản đồ
+        self.static_map = deepcopy(environment) # Bản đồ tĩnh
+        self.dynamic_map = deepcopy(environment)    # Bản đồ động
+        self.predict_map = deepcopy(environment)    # Bản đồ dự đoán
+        self.prob_map = deepcopy(environment)   # Bản đồ xác suất
+        self.seen_map = deepcopy(environment)   # Bản đồ đã thăm
+        self.predict_map[self.battery_pos] = self.dynamic_map[self.battery_pos] = 2 # Đặt vị trí pin là đã thăm
+        self.seen_map[self.battery_pos] = 2 # Đặt vị trí pin là đã thăm
 
-        self.logic.init_weight_map(environment) # Trọng số cho hành trình boustrophedon
+        self.logic.init_weight_map(environment) # Khởi tạo bản đồ trọng số 
 
     def update_dynamic_map(self, loop_count):
         """
@@ -169,32 +187,31 @@ class Robot:
         Returns:
             None
         """
-        row_count, col_count = len(self.static_map), len(self.static_map[0])
+        row_count, col_count = len(self.static_map), len(self.static_map[0])    # Số hàng và số cột của bản đồ
 
         for x in range(row_count):
             for y in range(col_count):
-                if self.dynamic_map[x, y] == 3 or self.dynamic_map[x, y] == 4:
-                    self.dynamic_map[x, y] = self.static_map[x, y]
-                if self.predict_map[x, y] == 3 or self.predict_map[x, y] == 4:
-                    self.predict_map[x, y] = self.static_map[x, y]
+                if self.dynamic_map[x, y] == 3 or self.dynamic_map[x, y] == 4:  # Nếu ô đang chứa chướng ngại vật động hoặc vật thể động tiềm năng
+                    self.dynamic_map[x, y] = self.static_map[x, y]  # Cập nhật lại theo bản đồ tĩnh
+                if self.predict_map[x, y] == 3 or self.predict_map[x, y] == 4:  # Nếu ô đang chứa chướng ngại vật động hoặc vật thể động tiềm năng
+                    self.predict_map[x, y] = self.static_map[x, y]  # Cập nhật lại theo bản đồ tĩnh
 
         # Bản đồ động
-        for obs in dynamic_obs_list:
-            if loop_count % obs.velocity == 0:
-                obs.move_one_step(self.static_map)
-
-            for dx in range(obs.height):
-                for dy in range(obs.width):
-                    x, y = obs.cur_row + dx, obs.cur_col + dy
-                    if self.current_pos == (x, y): 
+        for obs in dynamic_obs_list:    # Duyệt qua danh sách các chướng ngại vật động
+            if loop_count % obs.velocity == 0:  # Chỉ cập nhật mỗi khi đủ số lần lặp
+                obs.move_one_step(self.static_map)  # Di chuyển chướng ngại vật động một bước
+                
+            for dx in range(obs.height):    # Duyệt qua chiều dài của chướng ngại vật
+                for dy in range(obs.width): # Duyệt qua chiều rộng của chướng ngại vật
+                    x, y = obs.cur_row + dx, obs.cur_col + dy   # Tính toán vị trí của ô chướng ngại vật động
+                    if self.current_pos == (x, y):  # Nếu ô đang chứa robot 
                         print("Tổng chiều dài: ", coverage_length)
                         self.calculate_coverage_rataio()
                         print("Tỷ lệ phủ sóng: ", coverage_ratio)
                         print("Tỷ lệ lặp lại: ", repetition_rate)
                         raise Exception('Va chạm với chướng ngại vật')
-                    
-                    self.dynamic_map[x, y] = 3
-        ui.set_map(self.dynamic_map)
+                    self.dynamic_map[x, y] = 3  # Đặt ô chứa chướng ngại vật động thành 3
+        ui.set_map(self.dynamic_map)    # Cập nhật bản đồ động
 
     def update_probability_map_and_seen_map(self):
         """
@@ -206,40 +223,40 @@ class Robot:
         Returns:
             None
         """
-        row_count, col_count = len(self.static_map), len(self.static_map[0])
+        row_count, col_count = len(self.static_map), len(self.static_map[0])    # Số hàng và số cột của bản đồ
 
         # Đặt lại bản đồ đã thăm
         for x in range(row_count):
             for y in range(col_count):
-                self.seen_map[x, y] = self.static_map[x, y]
+                self.seen_map[x, y] = self.static_map[x, y] # Đặt lại bản đồ đã thăm
 
         # Đặt lại bản đồ xác suất
         for x in range(row_count):
             for y in range(col_count):
-                if self.static_map[x, y] == 1:
-                    self.prob_map[x, y] = 0
+                if self.static_map[x, y] == 1:  
+                    self.prob_map[x, y] = 0 # Nếu ô đang chứa chướng ngại vật, đặt xác suất thành 0
                 else:
-                    self.prob_map[x, y] = 0
+                    self.prob_map[x, y] = 0 
 
-        detected_obs = self.obs_sensor(vision_range=VISION_SENSOR_RANGE)
-        obs_potential_next_move = []
-        obs_occupy_list = []
-        for obs in detected_obs:
-            self.calculateProbabilityMap(obs)
-            for row in range(row_count):
+        detected_obs = self.obs_sensor(vision_range=VISION_SENSOR_RANGE)    # Xác định chướng ngại vật trong tầm nhìn của robot
+        obs_potential_next_move = []    # Danh sách các vị trí tiềm năng mà chướng ngại vật có thể di chuyển đến
+        obs_occupy_list = []    # Danh sách các ô mà chướng ngại vật đang chiếm giữ
+        for obs in detected_obs:    # Duyệt qua danh sách các chướng ngại vật phát hiện được
+            self.calculateProbabilityMap(obs)   # Tính toán bản đồ xác suất
+            for row in range(row_count):    
                 for col in range(col_count):
-                    if self.prob_map[row, col] != 0 and self.dynamic_map[row, col] != 1:
-                        obs_potential_next_move.append((row, col))
-            obs_potential_next_move += self.get_potential_positions(obs)
-            obs_occupy_list += obs.get_current_occupy_positions()
+                    if self.prob_map[row, col] != 0 and self.dynamic_map[row, col] != 1:    # Nếu ô không chứa chướng ngại vật và có xác suất khác 0
+                        obs_potential_next_move.append((row, col))  # Thêm vào danh sách các vị trí tiềm năng
+            obs_potential_next_move += self.get_potential_positions(obs)    # Thêm nhung vị trí tiềm năng từ bản đồ xác suất
+            obs_occupy_list += obs.get_current_occupy_positions()   # Thêm vào danh sách các ô mà chướng ngại vật đang chiếm giữ
 
-        for pos in obs_potential_next_move:
-            self.dynamic_map[pos] = 4
+        for pos in obs_potential_next_move: # Duyệt qua danh sách các vị trí tiềm năng
+            self.dynamic_map[pos] = 4   # Cập nhật bản đồ động mà ô đó có thể là vật thể động tiềm năng
 
-        for pos in obs_occupy_list:
-            self.dynamic_map[pos] = 3
-            self.seen_map[pos] = 3
-            self.prob_map[pos] = 100
+        for pos in obs_occupy_list: # Duyệt qua danh sách các ô mà chướng ngại vật đang chiếm giữ
+            self.dynamic_map[pos] = 3   # Cập nhật bản đồ động mà ô đó có chứa chướng ngại vật động
+            self.seen_map[pos] = 3  # Cập nhật bản đồ đã thăm mà ô đó có chứa chướng ngại vật động
+            self.prob_map[pos] = 100    # Cập nhật bản đồ xác suất mà ô đó có chứa chướng ngại vật động
         ui.set_map(self.dynamic_map)
 
     def run(self):
@@ -295,25 +312,28 @@ class Robot:
             self.update_probability_map_and_seen_map()  # Cập nhật bản đồ xác suất và bản đồ quan sát
 
             flag = self.detect_dynamic_obs(VISION_SENSOR_RANGE)  # Kiểm tra xem có vật thể động trong tầm nhìn không
-            self.logic.set_map(self.seen_map)
+            self.logic.set_map(self.seen_map)   # Cập nhật bản đồ đã thăm
 
             if flag == False:
                 wp = self.logic.get_wp(self.current_pos)  # Lấy đường dẫn tối ưu không có vật thể động
 
             if flag == True:
-                self.logic.set_prob_map(self.prob_map)
-                np.savetxt('array.txt', self.prob_map, fmt='%f', delimiter=' ', newline='\r\n')
-                max_bid_value, replan_wp = self.logic.get_replan_wp(self.current_pos)
+                self.logic.set_prob_map(self.prob_map)  # Cập nhật bản đồ xác suất
+                np.savetxt('array.txt', self.prob_map, fmt='%f', delimiter=' ', newline='\r\n') # Lưu bản đồ xác suất vào file
+                max_bid_value, replan_wp = self.logic.get_replan_wp(self.current_pos)   # Lấy đường dẫn tối ưu có vật thể động - đấu giá 2 bước
 
-                wp = [replan_wp]  # Sử dụng đường dẫn đã tính toán lại từ bản đồ xác suất
-
-                designated_wp = self.logic.get_wp(self.current_pos)
-                if wp != designated_wp and self.prob_map[self.current_pos] < MIN_PROB_THRESHOLD and len(designated_wp) > 0:
-                    designated_wp = designated_wp[0]
-                    if self.prob_map[designated_wp] > 0:
+                wp = [replan_wp]  # Sử dụng đường dẫn đã tính toán lại từ bản đồ xác suất - đấu giá 2 bước
+                
+                # QUYẾT ĐỊNH ĐI HOẠC CHỜ
+                designated_wp = self.logic.get_wp(self.current_pos) # Lấy đường dẫn tối ưu không có vật thể động - boustrophedon
+                
+                # Nếu ô được chọn theo đấu giá 2 bước khác với ô được chọn theo boustrophedon và xác suất của ô hiện tại nhỏ hơn ngưỡng 
+                if wp != designated_wp and self.prob_map[self.current_pos] < MIN_PROB_THRESHOLD and len(designated_wp) > 0:  
+                    designated_wp = designated_wp[0]    # Lấy theo boustrophedon
+                    if self.prob_map[designated_wp] > 0:    # Nếu xác suất của ô đó lớn hơn 0 thì đợi chướng ngại vật đi qua
                         continue
                     else:
-                        wp = [designated_wp]
+                        wp = [designated_wp]    # Chọn ô tiếp theo theo boustrophedon
 
             if self.logic.state == Q.NORMAL:
                 selected_cell = self.select_from_wp(wp)  # Lựa chọn ô tiếp theo để di chuyển tới
@@ -323,6 +343,8 @@ class Robot:
                 path = self.logic.escape_deadlock_path(self.current_pos)  # Tìm đường thoát khỏi tình huống bế tắc
                 if path == []:
                     # Kết thúc việc duyệt
+                    # self.move_to(self.battery_pos)
+                    # coverage_finish = True
                     # return
                     pg.image.save(ui.WIN, "./out/test2_5.png")
                     continue
@@ -343,15 +365,15 @@ class Robot:
 
     def get_border_cells(self, cur_pos):
         """
-        Trả về các ô biên liền kề vị trí hiện tại.
+        Trả về các ô xung quanh trong tầm nhìn ở vị trí hiện tại.
 
         Parameters:
             - cur_pos: Vị trí hiện tại của robot.
 
         Returns:
-            - border_cells: Danh sách các ô biên.
+            - border_cells: Danh sách các ô xung quanh trong tầm nhìn.
         """
-        left_border = right_border = up_border = down_border = -1
+        left_border = right_border = up_border = down_border = -1   # Khởi tạo
         border_cells = []
         cur_x, cur_y = cur_pos[0], cur_pos[1]
         for x in range(cur_x - VISION_SENSOR_RANGE, cur_x + 1):
@@ -393,30 +415,30 @@ class Robot:
         Parameters:
             - pos_from: Vị trí xuất phát.
             - pos_to: Vị trí đích.
-            - strict: Xác định cách xử lý ô biên khi nó không làm chậm.
+            - strict: Xác định cách xử lý ô biên.
 
         Returns:
             - cell_list: Danh sách các ô bị chặn.
         """
         threshold = 0.3 # Ngưỡng giá trị: [0, 0.5]
-        start = (pos_from[0] + 0.5, pos_from[1] + 0.5)
-        goal = (pos_to[0] + 0.5, pos_to[1] + 0.5)
+        start = (pos_from[0] + 0.5, pos_from[1] + 0.5)  # Đưa về tâm ô
+        goal = (pos_to[0] + 0.5, pos_to[1] + 0.5)   # Đưa về tâm ô
 
-        vecto = (goal[0] - start[0], goal[1] - start[1])
-        angle = - np.arctan2(vecto[0], vecto[1])
+        vecto = (goal[0] - start[0], goal[1] - start[1])    # Tính toán vecto
+        angle = - np.arctan2(vecto[0], vecto[1])    # Tính toán góc Hàm arctan2 trả về góc theo radian nằm trong khoảng [-pi, pi] 
+            # Thêm dấu trừ (-) trước, nó đảm bảo rằng góc quay sẽ theo chiều kim đồng hồ.
+        (x, y) = pos_from   # Lấy vị trí xuất phát
+        cell_list = [pos_from]  # Khởi tạo danh sách các ô bị chặn
 
-        (x, y) = pos_from
-        cell_list = [pos_from]
-
-        sx, sy = sign(vecto[0]), sign(vecto[1])
-        dx = abs(0.5 / math.sin(angle)) if vecto[0] != 0 else math.inf
-        dy = abs(0.5 / math.cos(angle)) if vecto[1] != 0 else math.inf
+        sx, sy = sign(vecto[0]), sign(vecto[1]) # Tính toán hướng di chuyển
+        dx = abs(0.5 / math.sin(angle)) if vecto[0] != 0 else math.inf  # Khoảng cách vật cản di chuyển theo trục x trong một bước
+        dy = abs(0.5 / math.cos(angle)) if vecto[1] != 0 else math.inf  # Khoảng cách vật cản di chuyển theo trục y trong một bước
         sum_x, sum_y = dx, dy
 
-        while (x, y) != pos_to:
+        while (x, y) != pos_to: # Duyệt qua các ô cho đến khi đến ô đích sử dụng thuật toán Bresenham
             # Nếu sum_x == sum_y, tăng cả x và y
             (movx, movy) = (sum_x < sum_y or math.isclose(sum_x, sum_y), sum_y < sum_x or math.isclose(sum_x, sum_y)) # bugfix: sin, cos không đưa ra kết quả chính xác
-
+                # hàm math.isclose(sum_x, sum_y) trả về True nếu sum_x và sum_y gần nhau
             prev_x, prev_y = x, y
             prev_sum_x, prev_sum_y = sum_x, sum_y
             if movx:
@@ -469,25 +491,25 @@ class Robot:
         Returns:
             - obs_detected_list: Danh sách các chướng ngại vật được phát hiện.
         """
-        obs_detected_list = []
+        obs_detected_list = []  # Danh sách các chướng ngại vật được phát hiện
 
-        in_sensor_list = []
-        border_cells = self.get_border_cells(self.current_pos)
-
-        for pos in border_cells:
-            obstruct_cell_list = self.obstruct_cell_list(self.current_pos, pos)
-            for cell in obstruct_cell_list:
-                if self.dynamic_map[cell] == 1:
+        in_sensor_list = [] # Danh sách các ô nằm trong tầm nhìn của robot
+        border_cells = self.get_border_cells(self.current_pos)  # Lấy danh sách các ô biên
+    
+        for pos in border_cells:    # Duyệt qua danh sách các ô biên
+            obstruct_cell_list = self.obstruct_cell_list(self.current_pos, pos)   # Lấy danh sách các ô bị chặn
+            for cell in obstruct_cell_list: # Duyệt qua danh sách các ô bị chặn
+                if self.dynamic_map[cell] == 1: 
                     break
                 if cell not in in_sensor_list:
                     in_sensor_list.append(cell)
 
-        for obs in dynamic_obs_list:
-            if set(obs.get_current_occupy_positions()) & set(in_sensor_list):
-                obs_detected_list.append(obs)
+        for obs in dynamic_obs_list:    # Duyệt qua danh sách các chướng ngại vật động
+            if set(obs.get_current_occupy_positions()) & set(in_sensor_list):   # Nếu có ô nằm trong tầm nhìn của robot
+                obs_detected_list.append(obs)   # Thêm vào danh sách các chướng ngại vật được phát hiện
         
-        self.obs_prev_detected_dict = self.obs_detected_dict.copy()
-        self.obs_detected_dict = {obs: obs.get_pos() for obs in obs_detected_list}
+        self.obs_prev_detected_dict = self.obs_detected_dict.copy()  # Cập nhật lại danh sách các chướng ngại vật được phát hiện trước đó
+        self.obs_detected_dict = {obs: obs.get_pos() for obs in obs_detected_list}  # Cập nhật lại danh sách các chướng ngại vật được phát hiện hiện tại    
         
         return obs_detected_list
 
@@ -526,29 +548,29 @@ class Robot:
         """
         neighbour = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1)]
 
-        obs_occupy_list = obs.get_current_occupy_positions()
+        obs_occupy_list = obs.get_current_occupy_positions()    # Lấy danh sách các ô mà chướng ngại vật đang chiếm giữ
 
-        prob_neighbour_list = []
-        visited = []
-        queue = deque()
-        queue.extend([(i, 0) for i in obs_occupy_list])
-        while queue:
-            current_pos, step = queue.popleft()
-            for dx, dy in neighbour:
-                x, y = current_pos[0] + dx, current_pos[1] + dy
-                if not check_valid_pos((x, y)):
+        prob_neighbour_list = []    # Danh sách các vị trí tiềm năng
+        visited = []    # Danh sách các ô đã được duyệt
+        queue = deque() # Hàng đợi
+        queue.extend([(i, 0) for i in obs_occupy_list]) # Thêm các ô mà chướng ngại vật đang chiếm giữ vào hàng đợi
+        while queue:    # Duyệt qua hàng đợi
+            current_pos, step = queue.popleft() # Lấy phần tử đầu tiên
+            for dx, dy in neighbour:    # Duyệt qua các ô hàng xóm
+                x, y = current_pos[0] + dx, current_pos[1] + dy # Tính toán vị trí hàng xóm
+                if not check_valid_pos((x, y)): # Nếu vị trí không hợp lệ
                     continue
-                if (x, y) in visited:
+                if (x, y) in visited:   # Nếu ô đã được duyệt
                     continue
-                if self.dynamic_map[x, y] == 1 or self.dynamic_map[x, y] == 3:
+                if self.dynamic_map[x, y] == 1 or self.dynamic_map[x, y] == 3:  # Nếu ô đang chứa chướng ngại vật
                     continue
-                if step > self.scan_freq * obs.velocity:
+                if step > self.scan_freq * obs.velocity:    # Nếu số bước lớn hơn số bước tối đa
                     continue
-                queue.append(((x, y), step + 1))
-                visited.append((x, y))
-                if self.prob_map[x, y] > 0 and self.dynamic_map[x, y] != 1:
-                    prob_neighbour_list.append((x, y))
-        return prob_neighbour_list
+                queue.append(((x, y), step + 1))    # Thêm vào hàng đợi
+                visited.append((x, y))  # Thêm vào danh sách các ô đã được duyệt
+                if self.prob_map[x, y] > 0 and self.dynamic_map[x, y] != 1: # Nếu ô không chứa chướng ngại vật và có xác suất khác 0
+                    prob_neighbour_list.append((x, y))  # Thêm vào danh sách các vị trí tiềm năng
+        return prob_neighbour_list  # Trả về danh sách các vị trí tiềm năng
 
     def calculate_obs_velocity(self, prev_pos, cur_pos):
         """
@@ -561,7 +583,8 @@ class Robot:
         Returns:
             - c: Tốc độ của chướng ngại vật.
         """
-        c = (math.dist(prev_pos, cur_pos)) / (self.scan_freq)
+        c = (math.dist(prev_pos, cur_pos)) / (self.scan_freq)   # Tính toán tốc độ của chướng ngại vật
+            # vận tốc = khoảng cách / thời gian (tần số quét)
         return c
 
     def predict_obs_velocity(self, obs: DynamicObstacle):
@@ -705,7 +728,7 @@ class Robot:
         """
         if self.dynamic_map[pos] == 3:
             raise Exception('Va chạm với chướng ngại vật')
-        if self.dynamic_map[pos] == 2:
+        if self.static_map[pos] == 2:
             global nums_cell_repetition
             # Đếm số lần lặp lại ô
             nums_cell_repetition += 1   
@@ -726,6 +749,11 @@ class Robot:
         if self.move_status == 0:
             ui.move_to(pos)
             coverage_length += dist
+            # if self.static_map[pos] == 2:
+            #     global nums_cell_repetition
+            #     # Đếm số lần lặp lại ô
+            #     nums_cell_repetition += 1   
+        
         elif self.move_status == 1:
             ui.move_retreat(pos)
             retreat_length += dist
@@ -839,7 +867,6 @@ class Robot:
                     nums_covered_cells += 1
         coverage_ratio = round(nums_covered_cells/total_coverable_cells*100, 2)
         repetition_rate = round(nums_cell_repetition/nums_covered_cells*100, 2)
-        print (nums_cell_repetition)
 
 def main():
     """
@@ -852,10 +879,11 @@ def main():
     robot.init_static_map(ENVIRONMENT)
     robot.run()
     robot.calculate_coverage_rataio()
+
     
     print('\nTổng số ô trống trên bản đồ:\t', total_coverable_cells)
-    print('Retreat:\t\t', retreat_length)
-    print('Advance:\t\t', advance_length)
+    # print('Retreat:\t\t', retreat_length)
+    # print('Advance:\t\t', advance_length)
     print('Số ô đã khám phá:\t', nums_covered_cells)
     print('Tỷ lệ phủ sóng:\t\t', coverage_ratio,'%')
     print('Số ô lặp lại:\t\t', nums_cell_repetition)

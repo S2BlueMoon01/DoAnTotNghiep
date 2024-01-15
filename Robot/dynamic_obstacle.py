@@ -26,7 +26,7 @@ class DynamicObstacle():
         Parameters:
         - start_pos (tuple): Vị trí ban đầu của chướng ngại vật dưới dạng (dòng, cột).
         - obs_size (tuple): Kích thước của chướng ngại vật dưới dạng (chiều cao, chiều rộng).
-        - direction (int): Hướng ban đầu của chướng ngại vật (1, 2, 3 hoặc 4).
+        - direction (int): Hướng ban đầu của chướng ngại vật (1, 2, 3 hoặc 4).  # 1: up, 2: left, 3: right, 4: down
         - velocity (float): Vận tốc của chướng ngại vật.
 
         Returns:
@@ -35,10 +35,10 @@ class DynamicObstacle():
         self.cur_row, self.cur_col = start_pos
         self.height, self.width = obs_size
         self.direction = direction
-        self.v = 1
-        self.w = 0
-        self.theta = self.getMovingAngle()
-        self.velocity = velocity
+        self.v = 1  # vận tốc dọc theo hướng di chuyển
+        self.w = 0  # vận tốc góc
+        self.theta = self.getMovingAngle()      # góc di chuyển của chướng ngại vật
+        self.velocity = velocity    # vận tốc của chướng ngại vật
 
     def move_one_step(self, map):
         """
@@ -111,13 +111,13 @@ class DynamicObstacle():
         Returns:
         - float: Góc di chuyển (rad).
         """
-        if self.direction == 1:
-            self.theta = math.pi
-        elif self.direction == 2:
+        if self.direction == 1: # direction = 1: up
+            self.theta = math.pi    
+        elif self.direction == 2:   # direction = 2: left
             self.theta = - math.pi / 2
-        elif self.direction == 3:
+        elif self.direction == 3:   # direction = 3: right
             self.theta = math.pi / 2
-        elif self.direction == 4:
+        elif self.direction == 4:   # direction = 4: down
             self.theta = 0
         return self.theta
     
@@ -143,43 +143,43 @@ class DynamicObstacle():
         """
         return np.mean(self.get_current_occupy_positions(), axis=0)
     
-    def predict(self, delta_t, map):
-        """
-        Dự đoán quỹ đạo di chuyển của chướng ngại vật trong khoảng thời gian 'delta_t'.
+    # def predict(self, delta_t, map):
+    #     """
+    #     Dự đoán quỹ đạo di chuyển của chướng ngại vật trong khoảng thời gian 'delta_t'.
 
-        Parameters:
-        - delta_t (float): Khoảng thời gian dự đoán (s).
-        - map (list): Bản đồ dưới dạng danh sách 2D với 0 là vị trí trống và 1 là vị trí có chướng ngại vật.
+    #     Parameters:
+    #     - delta_t (float): Khoảng thời gian dự đoán (s).
+    #     - map (list): Bản đồ dưới dạng danh sách 2D với 0 là vị trí trống và 1 là vị trí có chướng ngại vật.
 
-        Returns:
-        - list: Danh sách các vị trí dự đoán trong khoảng thời gian 'delta_t'.
-        """
-        travel_dist = self.v * delta_t
-        wp_list = []
-        (y, x) = (self.cur_row, self.cur_col)
-        for _ in range(math.ceil(travel_dist)):
-            if self.direction == 1:
-                y += 1
-                if not is_valid_pos((y, x), map) or map[y, x] == 1:
-                    (y, x) = (self.cur_row + 1, self.cur_col)
-                    self.direction = 4
-                wp_list.append((y, x))
-            elif self.direction == 2:
-                x -= 1
-                if not is_valid_pos((y, x), map) or map[y, x] == 1:
-                    (y, x) = (self.cur_row, self.cur_col + 1)
-                    self.direction = 3
-                wp_list.append((y, x))
-            elif self.direction == 3:
-                x += 1
-                if not is_valid_pos((y, x), map) or map[y, x] == 1:
-                    (y, x) = (self.cur_row, self.cur_col - 1)
-                    self.direction = 2
-                wp_list.append((y, x))
-            elif self.direction == 4:
-                y += 1
-                if not is_valid_pos((y, x), map) or map[y, x] == 1:
-                    (y, x) = (self.cur_row - 1, self.cur_col)
-                    self.direction = 1
-                wp_list.append((y, x))
-        return wp_list
+    #     Returns:
+    #     - list: Danh sách các vị trí dự đoán trong khoảng thời gian 'delta_t'.
+    #     """
+    #     travel_dist = self.v * delta_t
+    #     wp_list = []
+    #     (y, x) = (self.cur_row, self.cur_col)
+    #     for _ in range(math.ceil(travel_dist)):
+    #         if self.direction == 1:
+    #             y += 1
+    #             if not is_valid_pos((y, x), map) or map[y, x] == 1:
+    #                 (y, x) = (self.cur_row + 1, self.cur_col)
+    #                 self.direction = 4
+    #             wp_list.append((y, x))
+    #         elif self.direction == 2:
+    #             x -= 1
+    #             if not is_valid_pos((y, x), map) or map[y, x] == 1:
+    #                 (y, x) = (self.cur_row, self.cur_col + 1)
+    #                 self.direction = 3
+    #             wp_list.append((y, x))
+    #         elif self.direction == 3:
+    #             x += 1
+    #             if not is_valid_pos((y, x), map) or map[y, x] == 1:
+    #                 (y, x) = (self.cur_row, self.cur_col - 1)
+    #                 self.direction = 2
+    #             wp_list.append((y, x))
+    #         elif self.direction == 4:
+    #             y += 1
+    #             if not is_valid_pos((y, x), map) or map[y, x] == 1:
+    #                 (y, x) = (self.cur_row - 1, self.cur_col)
+    #                 self.direction = 1
+    #             wp_list.append((y, x))
+    #     return wp_list
