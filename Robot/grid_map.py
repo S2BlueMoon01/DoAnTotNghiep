@@ -89,7 +89,7 @@ class Grid_Map:
         self.move_status = 0 # 0: di chuyển bình thường, 1: rút lui, 2: sạc, 3: tiến lên
         self.charge_path_plan = [] # dùng cho rút lui và tiến lên
 
-        self.energy_display = None
+        self.energy_display = None  # thông tin hiển thị về năng lượng
         
         self.vision_range = vision_range # phạm vi cảm biến của robot
 
@@ -249,6 +249,7 @@ class Grid_Map:
                 # Màu những ô mà chướng ngại vật có thể xuất hiện
                 elif self.map[row][col] == 4:
                     color = ORANGE
+                
                 
                 pg.draw.rect(self.WIN,
                             color,

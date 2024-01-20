@@ -56,8 +56,11 @@ total_coverable_cells, nums_covered_cells = 0, 0    # Tổng số ô có thể d
 dynamic_obs_list : list[DynamicObstacle] = []
 
 # Thêm một đối tượng vật thể động vào danh sách, với các thông số cụ thể
-# dynamic_obs_list.append(DynamicObstacle((3, 6), (2, 1), 4, 10))
-dynamic_obs_list.append(DynamicObstacle((23, 12), (1, 3), 3, 10))    # Chướng ngại vật động 1 1.25v
+dynamic_obs_list.append(DynamicObstacle((3, 6), (2, 1), 4, 10))
+dynamic_obs_list.append(DynamicObstacle((17, 6), (2, 1), 4, 10))
+dynamic_obs_list.append(DynamicObstacle((3, 22), (2, 1), 4, 10))
+dynamic_obs_list.append(DynamicObstacle((17, 22), (2, 1), 4, 10))
+# dynamic_obs_list.append(DynamicObstacle((23, 12), (1, 3), 3, 10))    # Chướng ngại vật động 1 1.25v
 # dynamic_obs_list.append(DynamicObstacle((23, 12), (1, 3), 3, 8))    # Chướng ngại vật động 1 1.25v
 # dynamic_obs_list.append(DynamicObstacle((23, 12), (1, 3), 3, 12))    # Chướng ngại vật động 1 5/6v
 # dynamic_obs_list.append(DynamicObstacle((12, 15), (2, 2), 3, 8))    # Chướng ngại vật động 2 1.25v
@@ -70,7 +73,7 @@ dynamic_obs_list.append(DynamicObstacle((23, 12), (1, 3), 3, 10))    # Chướng
 # dynamic_obs_list.append(DynamicObstacle((26, 13), (1, 3), 4, 12))    # Chướng ngại vật động 5 5/6v
 
 
-dynamic_obs_list.append(DynamicObstacleRandom((26, 13), (1, 2), 4, 10))    # Chướng ngại vật động 5 5/6v
+# dynamic_obs_list.append(DynamicObstacleRandom((26, 13), (1, 2), 4, 10))    # Chướng ngại vật động 5 5/6v
 
 
 
@@ -405,12 +408,13 @@ class Robot:
                 else:
                     if y == left_border or y == right_border:
                         border_cells.append((x, y))
+        # print("Border cells: ", border_cells)
         return border_cells
 
 
     def obstruct_cell_list(self, pos_from, pos_to, strict=False):
         """
-        Trả về danh sách các ô trên đường từ pos_from đến pos_to bị chướng ngại vật.
+        Trả về danh sách các ô trên đường từ pos_from đến pos_to.
 
         Parameters:
             - pos_from: Vị trí xuất phát.
@@ -449,24 +453,23 @@ class Robot:
                 y += sy
                 sum_y += 2 * dy
 
-            if strict:
-                if movx and movy: 
-                    cell_list.extend([(prev_x, prev_y + sy), (prev_x + sx, prev_y)])
-                elif movx and not movy: 
-                    projection_y = (abs(prev_sum_x * math.cos(angle)) - 0.5) % 1
-                    if projection_y < threshold:
-                        cell_list.append((x, prev_y - sy))
-                    elif projection_y > 1 - threshold:
-                        cell_list.append((prev_x, prev_y + sy))
-                elif movy and not movx:
-                    projection_x = (abs(prev_sum_y * math.sin(angle)) - 0.5) % 1
-                    if projection_x < threshold:
-                        cell_list.append((prev_x - sx, y))
-                    elif projection_x > 1 - threshold:
-                        cell_list.append((prev_x + sx, prev_y))
+            # if strict:
+            #     if movx and movy: 
+            #         cell_list.extend([(prev_x, prev_y + sy), (prev_x + sx, prev_y)])
+            #     elif movx and not movy: 
+            #         projection_y = (abs(prev_sum_x * math.cos(angle)) - 0.5) % 1
+            #         if projection_y < threshold:
+            #             cell_list.append((x, prev_y - sy))
+            #         elif projection_y > 1 - threshold:
+            #             cell_list.append((prev_x, prev_y + sy))
+            #     elif movy and not movx:
+            #         projection_x = (abs(prev_sum_y * math.sin(angle)) - 0.5) % 1
+            #         if projection_x < threshold:
+            #             cell_list.append((prev_x - sx, y))
+            #         elif projection_x > 1 - threshold:
+            #             cell_list.append((prev_x + sx, prev_y))
 
             cell_list.append((x, y))
-
         return cell_list
 
     def select_from_wp(self, wp):
@@ -685,7 +688,7 @@ class Robot:
         """
         cur_x, cur_y = self.current_pos
 
-        in_sensor_list = []
+        in_sensor_list = [] # danh sách các ô nằm trong tầm nhìn của robot
         border_cells = self.get_border_cells(self.current_pos)
         for pos in border_cells:
             obstruct_cell_list = self.obstruct_cell_list(self.current_pos, pos)
@@ -748,11 +751,7 @@ class Robot:
 
         if self.move_status == 0:
             ui.move_to(pos)
-            coverage_length += dist
-            # if self.static_map[pos] == 2:
-            #     global nums_cell_repetition
-            #     # Đếm số lần lặp lại ô
-            #     nums_cell_repetition += 1   
+            coverage_length += dist 
         
         elif self.move_status == 1:
             ui.move_retreat(pos)
